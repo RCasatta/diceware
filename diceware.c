@@ -83,14 +83,16 @@ static size_t input(char *buf, size_t n_buf, const char *str) {
 }
 
 static uint32_t * copy256(uint32_t dst[8], const uint32_t src[8]) {
-    for (size_t i = 0; i < 8; ++i) {
+    size_t i;
+    for (i = 0; i < 8; ++i) {
         dst[i] = src[i];
     }
     return dst;
 }
 
 static uint32_t * zero256(uint32_t dst[8]) {
-    for (size_t i = 0; i < 8; ++i) {
+    size_t i;
+    for (i = 0; i < 8; ++i) {
         dst[i] = 0;
     }
     return dst;
@@ -110,7 +112,8 @@ static int zero256_p(const uint32_t dst[8]) {
 }
 
 static int one256_p(const uint32_t dst[8]) {
-    for (size_t i = 0; i < 7; ++i) {
+    size_t i;
+    for (i = 0; i < 7; ++i) {
         if (dst[i] != 0) {
             return FALSE;
         }
@@ -123,7 +126,8 @@ static int even256_p(const uint32_t dst[8]) {
 }
 
 static int cmp256(const uint32_t dst[8], const uint32_t src[8]) {
-    for (size_t i = 0; i < 8; ++i) {
+    size_t i;
+    for (i = 0; i < 8; ++i) {
         if (dst[i] < src[i]) {
             return -1;
         }
@@ -180,7 +184,8 @@ static int sub256(uint32_t dst[8], const uint32_t src[8]) {
 static uint16_t muln_1(uint32_t dst[], size_t n_dst, uint16_t src, uint16_t carry_in) {
     uint16_t *dst_w = (uint16_t *) dst;
     uint32_t tmp1, tmp2 = carry_in;
-    for (size_t i = n_dst * 2; i > 0;) {
+    size_t i;
+    for (i = n_dst * 2; i > 0;) {
         asm("mulu.w %[src],%[tmp]"
             : [tmp] "=d" (tmp1)
             : "0" (dst_w[--i]), [src] "idm" (src)
@@ -201,7 +206,8 @@ static uint16_t divn_1(uint32_t dst[], size_t n_dst, uint16_t src) {
     uint16_t *dst_w = (uint16_t *) dst;
     uint32_t tmp1, tmp2 = 0;
     n_dst *= 2;
-    for (size_t i = 0; i < n_dst;) {
+    size_t i;
+    for (i = 0; i < n_dst;) {
         asm("divu.w %[src],%[tmp]"
             : [tmp] "=d" (tmp1)
             : "0" (dst_w[i] + tmp2), [src] "idm" (src)
@@ -246,10 +252,11 @@ static int shr256_1(uint32_t dst[8]) {
 }
 
 static void mpn_set_str(uint32_t result[], size_t n_result, const uint8_t digits[], size_t n_digits, uint16_t base) {
-    for (size_t i = 0; i < n_result; ++i) {
+    size_t i;
+    for (i = 0; i < n_result; ++i) {
         result[i] = 0;
     }
-    for (size_t i = 0; i < n_digits; ++i) {
+    for (i = 0; i < n_digits; ++i) {
         muln_1(result, n_result, base, digits[i]);
     }
 }
@@ -272,12 +279,14 @@ static inline uint32_t * fp_dbl256(uint32_t dst[8], const uint32_t p[8]) {
     return fp_add256(dst, dst, p);
 }
 
-static uint32_t * fp_mul256(uint32_t * restrict r, const uint32_t n1[8], const uint32_t n2[8], const uint32_t p[8]) {
+static uint32_t * fp_mul256(uint32_t * __restrict r, const uint32_t n1[8], const uint32_t n2[8], const uint32_t p[8]) {
     zero256(r);
     int active = FALSE;
-    for (size_t i = 0; i < 8; ++i) {
+    size_t i;
+    for (i = 0; i < 8; ++i) {
         uint32_t w = n2[i];
-        for (size_t j = sizeof(uint32_t) * 8; j > 0; --j) {
+        size_t j;
+        for (j = sizeof(uint32_t) * 8; j > 0; --j) {
             if (active) {
                 fp_dbl256(r, p);
             }
@@ -291,11 +300,11 @@ static uint32_t * fp_mul256(uint32_t * restrict r, const uint32_t n1[8], const u
     return r;
 }
 
-static inline uint32_t * fp_sqr256(uint32_t * restrict r, const uint32_t n[8], const uint32_t p[8]) {
+static inline uint32_t * fp_sqr256(uint32_t * __restrict r, const uint32_t n[8], const uint32_t p[8]) {
     return fp_mul256(r, n, n, p);
 }
 
-static uint32_t * fp_inv256(uint32_t * restrict r, const uint32_t n[8], const uint32_t p[8]) {
+static uint32_t * fp_inv256(uint32_t * __restrict r, const uint32_t n[8], const uint32_t p[8]) {
     uint32_t u[8], v[8], s[8];
     copy256(u, n), copy256(v, p);
     zero256(r), zero256(s);
@@ -346,7 +355,7 @@ static uint32_t (* ecp_copy256(uint32_t dst[][8], const uint32_t src[][8]))[8] {
     return dst;
 }
 
-static uint32_t (* ecp_dbl256(uint32_t (* restrict R)[8], const uint32_t N[3][8], const uint32_t p[8]))[8] {
+static uint32_t (* ecp_dbl256(uint32_t (* __restrict R)[8], const uint32_t N[3][8], const uint32_t p[8]))[8] {
     const uint32_t *x = N[0], *y = N[1], *z = N[2];
     uint32_t *xr = R[0], *yr = R[1], *zr = R[2];
     if (zero256_p(z)) {
@@ -371,7 +380,7 @@ static uint32_t (* ecp_dbl256(uint32_t (* restrict R)[8], const uint32_t N[3][8]
     return R;
 }
 
-static uint32_t (* ecp_add256_aff(uint32_t (* restrict R)[8], const uint32_t N1[3][8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
+static uint32_t (* ecp_add256_aff(uint32_t (* __restrict R)[8], const uint32_t N1[3][8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
     const uint32_t *x1 = N1[0], *y1 = N1[1], *z1 = N1[2], *x2 = N2[0], *y2 = N2[1];
     uint32_t *xr = R[0], *yr = R[1], *zr = R[2];
     uint32_t t0[8], t1[8], t2[8], t3[8], t4[8];
@@ -398,7 +407,7 @@ static uint32_t (* ecp_add256_aff(uint32_t (* restrict R)[8], const uint32_t N1[
     return R;
 }
 
-static uint32_t (* ecp_add256(uint32_t (* restrict R)[8], const uint32_t N1[3][8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
+static uint32_t (* ecp_add256(uint32_t (* __restrict R)[8], const uint32_t N1[3][8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
     const uint32_t *x1 = N1[0], *y1 = N1[1], *z1 = N1[2], *x2 = N2[0], *y2 = N2[1], *z2 = N2[2];
     uint32_t *xr = R[0], *yr = R[1], *zr = R[2];
     if (zero256_p(z1)) {
@@ -442,15 +451,17 @@ static uint32_t (* ecp_add256(uint32_t (* restrict R)[8], const uint32_t N1[3][8
     return R;
 }
 
-static uint32_t (* ecp_mul256_(uint32_t (* restrict R)[8], const uint32_t n1[8], const uint32_t N2[3][8], const uint32_t p[8], uint32_t (* (*add)(uint32_t (* restrict)[8], const uint32_t [3][8], const uint32_t [3][8], const uint32_t [8]))[8]))[8] {
+static uint32_t (* ecp_mul256_(uint32_t (* __restrict R)[8], const uint32_t n1[8], const uint32_t N2[3][8], const uint32_t p[8], uint32_t (* (*add)(uint32_t (* __restrict)[8], const uint32_t [3][8], const uint32_t [3][8], const uint32_t [8]))[8]))[8] {
     int active = FALSE;
     size_t swaps = 0;
     uint32_t Ss[3][8], (*S)[8] = Ss, (*T)[8];
     ST_PROGRESS_BAR pb;
     ST_progressBar(&pb, 0, 8);
-    for (size_t i = 0; i < 8; ++i) {
+    size_t i;
+    for (i = 0; i < 8; ++i) {
         uint32_t w = n1[i];
-        for (size_t j = sizeof(uint32_t) * 8; j > 0; --j) {
+        size_t j;
+        for (j = sizeof(uint32_t) * 8; j > 0; --j) {
             if (OSCheckBreak()) {
                 ER_throw(ER_BREAK);
             }
@@ -479,11 +490,11 @@ static uint32_t (* ecp_mul256_(uint32_t (* restrict R)[8], const uint32_t n1[8],
     return R;
 }
 
-static uint32_t (* ecp_mul256(uint32_t (* restrict R)[8], const uint32_t n1[8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
+static uint32_t (* ecp_mul256(uint32_t (* __restrict R)[8], const uint32_t n1[8], const uint32_t N2[3][8], const uint32_t p[8]))[8] {
     return ecp_mul256_(R, n1, N2, p, one256_p(N2[2]) ? &ecp_add256_aff : &ecp_add256);
 }
 
-static uint32_t (* ecp_proj256(uint32_t (* restrict R)[8], const uint32_t N[3][8], const uint32_t p[8]))[8] {
+static uint32_t (* ecp_proj256(uint32_t (* __restrict R)[8], const uint32_t N[3][8], const uint32_t p[8]))[8] {
     const uint32_t *x = N[0], *y = N[1], *z = N[2];
     uint32_t *xr = R[0], *yr = R[1], *zr = R[2];
     uint32_t t0[8], t1[8], t2[8];
@@ -494,7 +505,7 @@ static uint32_t (* ecp_proj256(uint32_t (* restrict R)[8], const uint32_t N[3][8
     return R;
 }
 
-static void ecp_pubkey256(uint32_t (* restrict Q)[8], const uint32_t p[8], const uint32_t G[3][8], const uint32_t d[8]) {
+static void ecp_pubkey256(uint32_t (* __restrict Q)[8], const uint32_t p[8], const uint32_t G[3][8], const uint32_t d[8]) {
     uint32_t R[3][8];
     ecp_proj256(Q, (const uint32_t (*)[8]) ecp_mul256(R, d, G, p), p);
 }
@@ -530,11 +541,12 @@ static void _sha256_update(uint32_t state[8], const uint8_t block[64]) {
     };
     uint32_t words[64];
     memcpy(words, block, 64);
-    for (size_t i = 16; i < 64; ++i) {
+    size_t i;
+    for (i = 16; i < 64; ++i) {
         words[i] = words[i - 16] + (rotr(words[i - 15], 7) ^ rotr(words[i - 15], 18) ^ words[i - 15] >> 3) + words[i - 7] + (rotr(words[i - 2], 17) ^ rotr(words[i - 2], 19) ^ words[i - 2] >> 10);
     }
     uint32_t a = state[0], b = state[1], c = state[2], d = state[3], e = state[4], f = state[5], g = state[6], h = state[7];
-    for (size_t i = 0; i < 64; ++i) {
+    for (i = 0; i < 64; ++i) {
         uint32_t t1 = h + ((g ^ f) & e ^ g) + (rotr(e, 6) ^ rotr(e, 11) ^ rotr(e, 25)) + rc[i] + words[i];
         h = g, g = f, f = e, e = d + t1;
         uint32_t t2 = (c & (b ^ a) ^ b & a) + (rotr(a, 2) ^ rotr(a, 13) ^ rotr(a, 22));
@@ -572,7 +584,8 @@ static void sha256(uint8_t digest[32], const void *data, size_t data_size) {
 static void _ripemd160_update(uint32_t state[5], const uint8_t block[64]) {
     uint32_t words[16];
     memcpy(words, block, sizeof words);
-    for (size_t i = 0; i < 16; ++i) {
+    size_t i;
+    for (i = 0; i < 16; ++i) {
         words[i] = bswap32(words[i]);
     }
     uint32_t a = state[0], b = state[1], c = state[2], d = state[3], e = state[4];
@@ -665,13 +678,14 @@ static void ripemd160(uint8_t digest[], const void *data, size_t data_size) {
     block.l[14] = bswap32(data_size << 3);
     block.l[15] = 0;
     _ripemd160_update(state, block.b);
-    for (size_t i = 0; i < 5; ++i) {
+    size_t i;
+    for (i = 0; i < 5; ++i) {
         state[i] = bswap32(state[i]);
     }
     memcpy(digest, state, sizeof state);
 }
 
-static size_t base58check_encode(char * restrict out, size_t n_out, const void * restrict in, size_t n_in) {
+static size_t base58check_encode(char * __restrict out, size_t n_out, const void * __restrict in, size_t n_in) {
     static const char encode[58] = {
         '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
         'H', 'J', 'K', 'L', 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y',
@@ -726,7 +740,8 @@ void _main() {
 restart:
     for (;;) {
         memset(rolls, 0, n_rolls);
-        for (size_t i = 0; i < n_rolls; ++i) {
+        size_t i;
+        for (i = 0; i < n_rolls; ++i) {
             int roll;
             do {
                 char buf[17];
